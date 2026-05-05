@@ -92,12 +92,38 @@ Set ws = ThisWorkbook.Worksheets("Sheet1")
 
 ## 3. エラーハンドリング
 
+### 大原則：`On Error` は最小限に留める
+
+**`On Error` はエラーを隠蔽する**。開発中に多用すると、バグの発生箇所と原因の特定が極端に遅くなる。
+通常ルートで**発生が想定されるエラーのみ**にピンポイントで使用し、それ以外には使わない。
+
+| 用途 | 可否 | 理由 |
+|------|------|------|
+| ファイル・シートの存在確認 | OK | 発生が想定済み |
+| オブジェクト取得の試行 | OK | 発生が想定済み |
+| 全体を囲む汎用ハンドラ | 非推奨 | バグを隠して原因特定を妨げる |
+| `On Error Resume Next` を広範に使う | NG | サイレント失敗で最もデバッグが困難 |
+
+### 許容パターン：想定済みエラーへのピンポイント適用
+
 ```vb
+' 良い例 — シート存在確認に局所的に使用
+Function SheetExists(wsName As String) As Boolean
+    Dim ws As Worksheet
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets(wsName)
+    On Error GoTo 0          ' ← 直後に必ず解除
+    SheetExists = Not ws Is Nothing
+End Function
+```
+
+```vb
+' 良い例 — 想定済みエラーのみ捕捉
 Sub DoSomething()
     On Error GoTo ErrHandler
-    
+
     ' 処理本体
-    
+
     Exit Sub
 ErrHandler:
     MsgBox "エラーが発生しました: " & Err.Description, vbCritical
@@ -105,8 +131,20 @@ ErrHandler:
 End Sub
 ```
 
-- `On Error Resume Next` は局所的にのみ使用し、直後に `Err.Number` を確認してから `On Error GoTo 0` で解除する。
-- エラー番号とメッセージは必ずログまたはメッセージで出力する。
+### 非推奨パターン：開発中に使ってはいけない
+
+```vb
+' 悪い例 — どこで何が失敗したか全くわからなくなる
+Sub BadExample()
+    On Error Resume Next   ' ← NG: エラーを握りつぶす
+    Call StepA
+    Call StepB
+    Call StepC
+End Sub
+```
+
+> `On Error Resume Next` を解除せずに複数処理をまたぐと、
+> StepA で起きたエラーが StepC まで気づかれずに進行する。
 
 ## 4. パフォーマンス
 
