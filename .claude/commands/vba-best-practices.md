@@ -170,16 +170,22 @@ End Sub
 
 - セルへのアクセスはループ内で1セルずつではなく、**配列に一括読み込み**してから処理する。
 - `Select` / `Activate` は使わず、オブジェクト参照を直接操作する。
+- **`Range` / `Cells` は必ずシート変数を修飾して使う**。修飾なしはアクティブシートへの暗黙参照になり、意図しないシートを操作する。
 
 ```vb
-' 悪い例
-Sheets("Data").Select
-Range("A1").Select
-Selection.Value = "test"
+' 悪い例 — Selectを使わなくても暗黙のActiveSheetになる
+Range("A1").Value = "test"        ' ActiveSheet.Range("A1") と同じ
+Cells(1, 1).Value = "test"        ' ActiveSheet.Cells(1, 1) と同じ
 
-' 良い例
-Sheets("Data").Range("A1").Value = "test"
+' 良い例 — シート変数で明示的に修飾する
+Dim ws As Worksheet
+Set ws = ThisWorkbook.Worksheets("Data")
+ws.Range("A1").Value = "test"
+ws.Cells(1, 1).Value = "test"
 ```
+
+> 開発中は意図したシートがアクティブなので動いてしまい、
+> 本番・別環境で別のシートが開いていると誤ったシートを破壊する。
 
 ## 5. オブジェクト参照
 
